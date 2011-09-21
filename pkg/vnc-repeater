@@ -1,0 +1,69 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides:          vnc-repeater
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start daemon at boot time
+# Description:       Enable a vnc repeater proxy daemon
+### END INIT INFO
+
+USER=www-data
+GROUP=www-data
+
+ULTRAVNC_REPEATER_CLEAN=1
+#ULTRAVNC_REPEATER_LOGFILE=/var/log/vncrepeater.log
+ULTRAVNC_REPEATER_LOGFILE=vncrepeater.log
+ULTRAVNC_REPEATER_NO_RFB=1
+ULTRAVNC_REPEATER_BUFSIZE=250
+ULTRAVNC_REPEATER_REFUSE=0
+ULTRAVNC_REPEATER_CLIENT_PORT=5901
+ULTRAVNC_REPEATER_SERVER_PORT=5501
+ULTRAVNC_REPEATER_LOOP=BG
+
+#ULTRAVNC_REPEATER=perl\ /home/tom/dev/vnc-repeater/ultravnc_repeater.pl
+ULTRAVNC_REPEATER=perl\ /usr/bin/vncrepeater
+ULTRAVNC_REPEATER_NAME=`basename $ULTRAVNC_REPEATER`
+ULTRAVNC_REPEATER_ARGS="- USER=$USER GROUP=$GROUP ULTRAVNC_REPEATER_CLEAN=$ULTRAVNC_REPEATER_CLEAN ULTRAVNC_REPEATER_LOGFILE=$ULTRAVNC_REPEATER_LOGFILE ULTRAVNC_REPEATER_NO_RFB=$ULTRAVNC_REPEATER_NO_RFB ULTRAVNC_REPEATER_BUFSIZE=$ULTRAVNC_REPEATER_BUFSIZE ULTRAVNC_REPEATER_REFUSE=$ULTRAVNC_REPEATER_REFUSE ULTRAVNC_REPEATER_CLIENT_PORT=$ULTRAVNC_REPEATER_CLIENT_PORT ULTRAVNC_REPEATER_SERVER_PORT=$ULTRAVNC_REPEATER_SERVER_PORT ULTRAVNC_REPEATER_LOOP=$ULTRAVNC_REPEATER_LOOP PATH=/usr/bin:/bin $ULTRAVNC_REPEATER"
+RETVAL=0
+
+# Create logfile, if not preset
+if [ ! -f $ULTRAVNC_REPEATER_LOGFILE ]
+then
+    touch $ULTRAVNC_REPEATER_LOGFILE
+    chown $USER:$GROUP $ULTRAVNC_REPEATER_LOGFILE
+    chmod +w $ULTRAVNC_REPEATER_LOGFILE
+fi
+
+start() {
+      echo -n "Starting VNC repeater: "
+      start-stop-daemon --quiet --start --background --chuid "$USER" --group "$GROUP" --exec /usr/bin/env -- $ULTRAVNC_REPEATER_ARGS
+      RETVAL=$?
+      echo "$ULTRAVNC_REPEATER_NAME."
+}
+stop() {
+      echo -n "Stopping VNC repeater: "
+      killall -q -w -u $USER $ULTRAVNC_REPEATER
+      RETVAL=$?
+      echo "$ULTRAVNC_REPEATER_NAME."
+}
+
+case "$1" in
+    start)
+      start
+  ;;
+    stop)
+      stop
+  ;;
+    restart)
+      stop
+      start
+  ;;
+    *)
+      echo "Usage: vnc-repeater {start|stop|restart}"
+      exit 1
+  ;;
+esac
+exit $RETVAL
+
