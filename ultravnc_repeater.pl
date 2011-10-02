@@ -153,7 +153,7 @@ if (@ARGV && $ARGV[0] =~ /-h/)
 
 # Set default environment variable values
 if (!exists $ENV{ULTRAVNC_REPEATER_CLEAN}) {$ENV{ULTRAVNC_REPEATER_CLEAN} = '1';}
-if (!exists $ENV{ULTRAVNC_REPEATER_LOGFILE}) {$ENV{ULTRAVNC_REPEATER_LOGFILE} = 'repeater.log';}  # Note: abs_path($0) = /home/user/public_html/cgi-bin/ultravnc_repeater.pl
+if (!exists $ENV{ULTRAVNC_REPEATER_LOGFILE}) {$ENV{ULTRAVNC_REPEATER_LOGFILE} = '/var/log/repeater.log';}  # Note: abs_path($0) = /home/user/public_html/cgi-bin/ultravnc_repeater.pl
 if (!exists $ENV{ULTRAVNC_REPEATER_NO_RFB}) {$ENV{ULTRAVNC_REPEATER_NO_RFB} = '';}
 if (!exists $ENV{ULTRAVNC_REPEATER_BUFSIZE}) {$ENV{ULTRAVNC_REPEATER_BUFSIZE} = '250';}
 if (!exists $ENV{ULTRAVNC_REPEATER_REFUSE}) {$ENV{ULTRAVNC_REPEATER_REFUSE} = '';}
@@ -208,7 +208,7 @@ validateEnv();
 #
 if (exists $ENV{ULTRAVNC_REPEATER_LOGFILE}) 
 {
- my $lf = dirname(abs_path($0)) . '/' . $ENV{ULTRAVNC_REPEATER_LOGFILE};
+ my $lf = $ENV{ULTRAVNC_REPEATER_LOGFILE};
  
  close STDOUT;
  if (!open(STDOUT, ">>$lf")) {die "ultravnc_repeater.pl: $lf $!\n";}
@@ -366,6 +366,7 @@ my $server_port = $ENV{ULTRAVNC_REPEATER_SERVER_PORT};
 
 my $uname = `uname`;
 chomp $uname;
+lprint("running on a \"$uname\" machine.");
 
 my $repeater_bufsize = 250;
 $repeater_bufsize = $ENV{ULTRAVNC_REPEATER_BUFSIZE} if exists $ENV{ULTRAVNC_REPEATER_BUFSIZE};
@@ -1015,17 +1016,17 @@ sub check_cgi
 # (This should prevent any of the security issues mentioned earlier by Karl...  Keith.)
 sub validateEnv()
 {
- if (exists $ENV{ULTRAVNC_REPEATER_LOGFILE})
- {
-  if ($ENV{ULTRAVNC_REPEATER_LOGFILE} !~ /^[a-z _\-\.]+$/i) {lprint("Invalid log file name: [" . $ENV{ULTRAVNC_REPEATER_LOGFILE} . "]"); $ENV{ULTRAVNC_REPEATER_LOGFILE} = 'repeater.log';}
-  elsif (($ENV{ULTRAVNC_REPEATER_LOGFILE} !~ s/^([a-z _\-\.]+\.)[a-z]+$/$1log/i)) {$ENV{ULTRAVNC_REPEATER_LOGFILE} = $ENV{ULTRAVNC_REPEATER_LOGFILE} . '.log';}
- } 
+ #if (exists $ENV{ULTRAVNC_REPEATER_LOGFILE})
+ #{
+ # if ($ENV{ULTRAVNC_REPEATER_LOGFILE} !~ /^[a-z _\-\.]+$/i) {lprint("Invalid log file name: [" . $ENV{ULTRAVNC_REPEATER_LOGFILE} . "]"); $ENV{ULTRAVNC_REPEATER_LOGFILE} = 'repeater.log';}
+ # elsif (($ENV{ULTRAVNC_REPEATER_LOGFILE} !~ s/^([a-z _\-\.]+\.)[a-z]+$/$1log/i)) {$ENV{ULTRAVNC_REPEATER_LOGFILE} = $ENV{ULTRAVNC_REPEATER_LOGFILE} . '.log';}
+ #} 
 
- if (exists $ENV{ULTRAVNC_REPEATER_PIDFILE})
- {
-  if ($ENV{ULTRAVNC_REPEATER_PIDFILE} !~ /^[a-z _\-\.]+$/i) {lprint("Invalid pid file name: [" . $ENV{ULTRAVNC_REPEATER_PIDFILE} . "]"); $ENV{ULTRAVNC_REPEATER_PIDFILE} = 'repeater.pid';}
-  elsif (($ENV{ULTRAVNC_REPEATER_PIDFILE} !~ s/^([a-z _\-\.]+\.)[a-z]+$/$1pid/i)) {$ENV{ULTRAVNC_REPEATER_PIDFILE} = $ENV{ULTRAVNC_REPEATER_PIDFILE} . '.pid';}
- } 
+ #if (exists $ENV{ULTRAVNC_REPEATER_PIDFILE})
+ #{
+ # if ($ENV{ULTRAVNC_REPEATER_PIDFILE} !~ /^[a-z _\-\.]+$/i) {lprint("Invalid pid file name: [" . $ENV{ULTRAVNC_REPEATER_PIDFILE} . "]"); $ENV{ULTRAVNC_REPEATER_PIDFILE} = 'repeater.pid';}
+ # elsif (($ENV{ULTRAVNC_REPEATER_PIDFILE} !~ s/^([a-z _\-\.]+\.)[a-z]+$/$1pid/i)) {$ENV{ULTRAVNC_REPEATER_PIDFILE} = $ENV{ULTRAVNC_REPEATER_PIDFILE} . '.pid';}
+ #} 
 
  if (exists $ENV{ULTRAVNC_REPEATER_BUFSIZE} && $ENV{ULTRAVNC_REPEATER_BUFSIZE} !~ /^\d+$/) {lprint("Invalid buffer size: [" . $ENV{ULTRAVNC_REPEATER_BUFSIZE} . "]"); $ENV{ULTRAVNC_REPEATER_BUFSIZE} = '250';}
  if (exists $ENV{ULTRAVNC_REPEATER_CLIENT_PORT} && $ENV{ULTRAVNC_REPEATER_CLIENT_PORT} !~ /^\d+$/) {lprint("Invalid client port: [" . $ENV{ULTRAVNC_REPEATER_CLIENT_PORT} . "]"); $ENV{ULTRAVNC_REPEATER_CLIENT_PORT} = '5900';}
