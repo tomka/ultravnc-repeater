@@ -121,6 +121,9 @@ e.g. "-l repeater.log"
 Use -p to set a file to store the master pid in for your own tracking (same as ULTRAVNC_REPEATER_PIDFILE).
 For example, a cronjob may supply a -p pidfile and check if the process id stored in the file is still running before deciding to run this script.
 
+Use -E or set the env. var. ULTRAVNC_REPEATER_TEMPBAN_ERRONOUS_TIME to set a temporary
+ban time for IPs that initialized the connection in a wrong way. The time is given in minutes.
+
 Examples:
 ---------
  env ULTRAVNC_REPEATER_LOOP=BG ULTRAVNC_REPEATER_LOGFILE=u.log ultravnc_repeater.pl ...
@@ -159,6 +162,7 @@ if (!exists $ENV{ULTRAVNC_REPEATER_BUFSIZE}) {$ENV{ULTRAVNC_REPEATER_BUFSIZE} = 
 if (!exists $ENV{ULTRAVNC_REPEATER_REFUSE}) {$ENV{ULTRAVNC_REPEATER_REFUSE} = '';}
 if (!exists $ENV{ULTRAVNC_REPEATER_CLIENT_PORT}) {$ENV{ULTRAVNC_REPEATER_CLIENT_PORT} = '5900';}
 if (!exists $ENV{ULTRAVNC_REPEATER_SERVER_PORT}) {$ENV{ULTRAVNC_REPEATER_SERVER_PORT} = '5500';}
+if (!exists $ENV{ULTRAVNC_REPEATER_TEMPBAN_ERRONOUS_TIME}) {$ENV{ULTRAVNC_REPEATER_TEMPBAN_ERRONOUS_TIME} = '120';}
 
 # my $client_port0 = 5900;
 # my $server_port0 = 5500;
@@ -174,6 +178,7 @@ while (@ARGV)
  elsif ($ARGV[0] eq '-c') {shift; $ENV{ULTRAVNC_REPEATER_CLIENT_PORT} = shift;}
  elsif ($ARGV[0] eq '-s') {shift; $ENV{ULTRAVNC_REPEATER_SERVER_PORT} = shift;}
  elsif ($ARGV[0] eq '-b') {shift; $ENV{ULTRAVNC_REPEATER_BUFSIZE} = shift;}
+ elsif ($ARGV[0] eq '-E') {shift; $ENV{ULTRAVNC_REPEATER_TEMPBAN_ERRONOUS_TIME} = shift;}
  elsif ($ARGV[0] eq '-L') 
  {
   shift;
@@ -470,16 +475,52 @@ sub alarm_handler
  $got_alarm = 1;
 }
 
+
+my $tempban_time = $ENV{ULTRAVNC_REPEATER_TEMPBAN_ERRONOUS_TIME};
+my %tempban_hash = ();
+
 while (1) 
 {
  my @ready = $select->can_read($select_timeout);
  foreach my $fh (@ready) 
  {
-  if (($client_listen && $fh == $client_listen) || ($client_listen6 && $fh == $client_listen6)) {lprint("new vnc client connecting.");}
-  elsif (($server_listen && $fh == $server_listen) || ($server_listen6 && $fh == $server_listen6)) {lprint("new vnc server connecting.");}
+  my $new_client_connection = 0;
+  my $new_server_connection = 0;
+  if (($client_listen && $fh == $client_listen) || ($client_listen6 && $fh == $client_listen6)) {$new_client_connection = 1;}
+  elsif (($server_listen && $fh == $server_listen) || ($server_listen6 && $fh == $server_listen6)) {$new_server_connection = 1;}
   
   my $sock = $fh->accept();
   if (! $sock) {lprint("$prog: accept $!"); next;}
+
+  if ($tempban_time > 0) {
+    my @to_remove;
+    my $drop_connection = 0;
+    # Check which IPs to unban and if current connection is to be dropped
+    while ( my ($key, $value) = each(%tempban_hash) ) {
+      my $passed = time - $value;
+      my $passed_min = $passed / 60;
+      my $diff =  $tempban_time - $passed_min;
+      if ($diff > 0) {
+        my $minutes = sprintf "%.1f", $diff;
+	lprint("due to ban for the next $minutes minutes: dropping connection attempt of ", $sock->peerhost);
+	close $sock;
+    	$drop_connection = 1;
+      } elsif ($key eq $sock->peerhost) {
+        push (@to_remove, $sock->peerhost());
+      }
+    }
+    # Delete IPs that are over time
+    for my $ip (@to_remove) {
+      delete $tempban_hash{$ip};
+    }
+    # If the connection has been dropped, wait for next
+    if ($drop_connection) {
+      next;
+    }
+  }
+
+  if ($new_client_connection) {lprint("new vnc client connecting.");}
+  elsif ($new_server_connection) {lprint("new vnc server connecting.");}
 
   if (($client_listen && $fh == $client_listen) || ($client_listen6 && $fh == $client_listen6)) {lprint('Client IP Address: ' . $sock->peerhost());}  # log the Client IP address
   if (($server_listen && $fh == $server_listen) || ($server_listen6 && $fh == $server_listen6)) {lprint('Server IP Address: ' . $sock->peerhost());}  # log the Server IP address
@@ -513,8 +554,11 @@ while (1)
 
   if ($got_alarm) {lprint("$prog: read timed out: $!");}
   elsif (! defined $n) {lprint("$prog: read error: $!");}
-  elsif ($repeater_bufsize > 0 && $n != $size) {lprint("$prog: short read $n != $size $!"); close $sock;}
-  elsif (($client_listen && $fh == $client_listen) || ($client_listen6 && $fh == $client_listen6)) {do_new_client($sock, $buf);}
+  elsif ($repeater_bufsize > 0 && $n != $size) {
+        $tempban_hash{$sock->peerhost()} = time if ($tempban_time > 0);
+	lprint("$prog: short read $n != $size $!");
+	close $sock;
+  } elsif (($client_listen && $fh == $client_listen) || ($client_listen6 && $fh == $client_listen6)) {do_new_client($sock, $buf);}
   elsif (($server_listen && $fh == $server_listen) || ($server_listen6 && $fh == $server_listen6)) {do_new_server($sock, $buf);}
  }
  clean_connections();
