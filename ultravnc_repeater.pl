@@ -17,7 +17,6 @@
 # Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA
 # or see <http://www.gnu.org/licenses/>.
 
-
 # 2011-05-27: Modified by Karl Runge and Keith Willis <ratchunk@gmail.com>
 #
 #  Notes:
@@ -144,7 +143,7 @@ Examples:
     ultravnc_repeater.pl -l repeater.log -p pid.log
     ultravnc_repeater.pl -l repeater.log -p pid.log -r -c 5901 -s 5500 -L BG -R 1
     ultravnc_repeater.pl -r -C -R 1 -L BG -b 250 -c 5901 -s 5501 -l repeater.log -p repeater.pid
-
+    
 Note: The corresponding environment variables will be set from the command-line arguments and also from the default values.
 ';
 
